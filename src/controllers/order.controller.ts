@@ -1,16 +1,39 @@
-import { Request, Response } from "express";
+import {
+  Request,
+  Response
+} from "express";
 
-export const createOrder = async (
-  req: Request,
-  res: Response
-) => {
-  try {
-    res.status(201).json({
-      message: "Order created"
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Internal server error"
-    });
-  }
+import {
+  createOrderService
+} from "../services/order.service";
+
+import {
+  OrderDTO
+} from "../dto/order.dto";
+
+export const createOrder =
+  async (
+    req: Request,
+    res: Response
+  ): Promise<void> => {
+
+    try {
+
+      const body =
+        req.body as OrderDTO;
+
+      const result =
+        await createOrderService(body);
+
+      res.status(201).json(result);
+
+    } catch (error: any) {
+
+      res.status(400).json({
+        message:
+          error.message ||
+          "Failed to create order"
+      });
+
+    }
 };
