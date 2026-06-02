@@ -1,13 +1,23 @@
 import pool from "../config/db";
+import { createError } from "../middlewares/errorHandler";
 import { Warehouse } from "../models/warehouse.model";
 import { OrderItemDTO } from "../dto/order.dto";
 
+/**
+ * Find the nearest active warehouse that can fulfill all requested items.
+ * @param latitude delivery latitude
+ * @param longitude delivery longitude
+ * @param items list of order items to fulfill
+ * @returns the nearest warehouse that has enough available stock
+ * @throws AppError if no warehouse can fulfill the order
+ */
 export const findNearestWarehouse =
   async (
     latitude: number,
     longitude: number,
     items: OrderItemDTO[]
   ): Promise<Warehouse> => {
+
 
     const [warehouseRows] =
       await pool.query(
@@ -20,6 +30,7 @@ export const findNearestWarehouse =
 
     const warehouses =
       warehouseRows as Warehouse[];
+
 
     const warehouseDistances =
       warehouses.map((warehouse) => {
@@ -48,6 +59,7 @@ export const findNearestWarehouse =
     for (const warehouse of warehouseDistances) {
 
       let allItemsAvailable = true;
+      const missingItems: string[] = [];
 
       for (const item of items) {
 
@@ -70,6 +82,7 @@ export const findNearestWarehouse =
 
         if (inventories.length === 0) {
           allItemsAvailable = false;
+          missingItems.push(`SKU ${item.sku_id}: No inventory record`);
           break;
         }
 
@@ -83,6 +96,9 @@ export const findNearestWarehouse =
           availableStock < item.quantity
         ) {
           allItemsAvailable = false;
+          missingItems.push(
+            `SKU ${item.sku_id}: Need ${item.quantity}, Have ${availableStock}`
+          );
           break;
         }
       }
@@ -90,9 +106,13 @@ export const findNearestWarehouse =
       if (allItemsAvailable) {
         return warehouse;
       }
+
     }
 
-    throw new Error(
-      "No warehouse can fulfill this order"
-    );
+    const errorMessage = 
+      warehouseDistances.length === 0
+        ? "No active warehouses found"
+        : "No warehouse has sufficient stock to fulfill this order";
+    
+    throw createError(errorMessage, 422);
 };

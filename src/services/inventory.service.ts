@@ -1,31 +1,19 @@
-import { PoolConnection, RowDataPacket } from "mysql2/promise";
+import { PoolConnection } from "mysql2/promise";
 
 import {
   inventoryClient,
-  InventoryReserveResult,
 } from "../config/httpClients";
 
 import pool from "../config/db";
 import { OrderItemDTO } from "../dto/order.dto";
+import { InventoryRow, ReserveStockResult } from "../dto/inventory.dto";
 
-// =====================================
-// TYPES
-// =====================================
-
-
-interface InventoryRow extends RowDataPacket {
-  sku_id: number;
-  quantity: number;
-  reserved_quantity: number;
-}
-
-export interface ReserveStockResult extends InventoryReserveResult {}
-
-
-// =====================================
-// CHECK STOCK
-// =====================================
-
+/**
+ * Build a map of available stock quantities for requested SKUs.
+ * @param warehouseId warehouse to check stock in
+ * @param items order items to verify
+ * @returns a map from SKU ID to available quantity
+ */
 export const checkStock = async (
   warehouseId: number,
   items: OrderItemDTO[]
@@ -75,50 +63,18 @@ export const checkStock = async (
 };
 
 
-// =====================================
-// RESERVE STOCK
-// =====================================
-
+/**
+ * Reserve inventory for an order in the selected warehouse.
+ * @param warehouseId warehouse to reserve inventory from
+ * @param orderId order identifier
+ * @param items list of items to reserve
+ * @returns reservation result with success, reserved items, and failures
+ */
 export const reserveStock = async (
   warehouseId: number,
   orderId: number,
   items: OrderItemDTO[]
 ): Promise<ReserveStockResult> => {
-
-  // =================================
-  // TRY EXTERNAL SERVICE
-  // =================================
-
-  try {
-
-    const response =
-      await inventoryClient
-        .reserveInventory(
-          warehouseId,
-          orderId,
-          items
-        );
-
-    return response;
-
-  } catch (externalError: any) {
-
-    console.warn(
-      `
-[Inventory Service]
-
-External Service Failed
-
-Fallback To Local DB
-`,
-      externalError.message
-    );
-  }
-
-  // =================================
-  // LOCAL FALLBACK
-  // =================================
-
   const connection:
     PoolConnection =
       await pool.getConnection();
@@ -132,6 +88,7 @@ Fallback To Local DB
     const failedItems: Array<OrderItemDTO & { reason: string }> = [];
 
     for (const item of items) {
+
 
       const [rows] =
         await connection.execute<
@@ -152,15 +109,10 @@ Fallback To Local DB
           ]
         );
 
-      // =============================
-      // SKU NOT FOUND
-      // =============================
-
       if (rows.length === 0) {
 
         failedItems.push({
           ...item,
-
           reason:
             "SKU not found in warehouse"
         });
@@ -170,14 +122,9 @@ Fallback To Local DB
 
       const inventory =
         rows[0];
-
       const available =
         inventory.quantity -
         inventory.reserved_quantity;
-
-      // =============================
-      // INSUFFICIENT STOCK
-      // =============================
 
       if (
         available <
@@ -193,10 +140,6 @@ Fallback To Local DB
 
         continue;
       }
-
-      // =============================
-      // RESERVE INVENTORY
-      // =============================
 
       await connection.execute(
         `
@@ -240,10 +183,11 @@ Fallback To Local DB
 };
 
 
-// =====================================
-// RELEASE STOCK
-// =====================================
-
+/**
+ * Release previously reserved inventory back to the warehouse.
+ * @param warehouseId warehouse to release inventory from
+ * @param items list of reserved items to release
+ */
 export const releaseStock = async (
   warehouseId: number,
   items: OrderItemDTO[]
@@ -256,9 +200,7 @@ export const releaseStock = async (
         warehouseId,
         items
       );
-
   } catch {
-
     const connection =
       await pool.getConnection();
 

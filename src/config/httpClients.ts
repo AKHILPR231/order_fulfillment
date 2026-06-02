@@ -12,22 +12,18 @@ export interface InventoryReleaseResult {
 
 export const inventoryClient = {
 
+  /**
+   * Simulate reserving inventory in an external service.
+   * @param warehouseId warehouse identifier
+   * @param orderId order identifier
+   * @param items items to reserve
+   * @returns external reserve result stub
+   */
   reserveInventory: async (
     warehouseId: number,
     orderId: number,
     items: OrderItemDTO[]
   ): Promise<InventoryReserveResult> => {
-
-    console.log(`
-[Inventory Service]
-
-Reserving Inventory
-
-Warehouse ID: ${warehouseId}
-Order ID: ${orderId}
-Items: ${JSON.stringify(items)}
-`);
-
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     return {
@@ -37,20 +33,16 @@ Items: ${JSON.stringify(items)}
     };
   },
 
+  /**
+   * Simulate releasing reserved inventory in an external service.
+   * @param warehouseId warehouse identifier
+   * @param items items to release
+   * @returns external release result stub
+   */
   releaseInventory: async (
     warehouseId: number,
     items: OrderItemDTO[]
   ): Promise<InventoryReleaseResult> => {
-
-    console.log(`
-[Inventory Service]
-
-Releasing Inventory
-
-Warehouse ID: ${warehouseId}
-Items: ${JSON.stringify(items)}
-`);
-
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     return {
@@ -61,19 +53,14 @@ Items: ${JSON.stringify(items)}
 
 export const warehouseStaffClient = {
 
+  /**
+   * Simulate notifying warehouse staff of a new picking task.
+   * @param pickingListId picking list identifier
+   * @returns notification result stub
+   */
   notifyPickingTask: async (
     pickingListId: number
   ) => {
-
-    console.log(`
-[Warehouse Staff Service]
-
-New Picking Task Assigned
-
-Picking List ID:
-${pickingListId}
-`);
-
     await new Promise(
       resolve => setTimeout(resolve, 500)
     );
@@ -86,19 +73,14 @@ ${pickingListId}
 
 export const dispatchClient = {
 
+  /**
+   * Simulate notifying dispatch that an order is ready.
+   * @param orderId order identifier
+   * @returns notification result stub
+   */
   notifyDispatchReady: async (
     orderId: number
   ) => {
-
-    console.log(`
-[Dispatch Service]
-
-Order Ready For Dispatch
-
-Order ID:
-${orderId}
-`);
-
     await new Promise(
       resolve => setTimeout(resolve, 500)
     );

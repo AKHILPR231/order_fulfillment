@@ -6,13 +6,20 @@ export interface AppError extends Error {
 }
 
 
+/**
+ * Express error handling middleware.
+ * @param err application error
+ * @param req Express request object
+ * @param res Express response object
+ * @param next Express next middleware callback
+ */
 export const errorHandler = (
   err: AppError,
   req: Request,
   res: Response,
   next: NextFunction
 ): void => {
-     console.error(
+  console.error(
     `[ERROR] ${req.method} ${req.originalUrl}`,
     err
   );
@@ -30,13 +37,15 @@ export const errorHandler = (
 
     error: message,
 
-    ...(process.env.NODE_ENV ===
-      "development" && {
-        stack: err.stack
-      })
   });
 }
 
+/**
+ * Create an application error with an HTTP status code.
+ * @param message error message text
+ * @param statusCode HTTP status code
+ * @returns configured AppError
+ */
 export const createError = (
   message: string,
   statusCode: number = 400
